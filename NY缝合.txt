@@ -1,0 +1,61 @@
+-- 服务器检测与自动加载脚本
+local function checkServer()
+    -- 先显示欢迎信息
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "欢迎使用NY",
+        Text = "正在检测服务器...",
+        Icon = "",
+        Duration = 3
+    })
+    
+    -- 等待一下让欢迎信息显示
+    wait(2)
+    
+    -- 获取当前游戏名称
+    local success, result = pcall(function()
+        return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
+    end)
+    
+    local gameName = success and result or "未知游戏"
+    
+    -- 检查是否为The Rake REMASTERED
+    if string.find(string.lower(gameName), "the rake remastered") then
+        -- 使用游戏弹窗功能
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "服务器检测",
+            Text = "已检测到rake，正在加载ESP功能...",
+            Icon = "",
+            Duration = 5
+        })
+        
+        -- 等待一下让用户看到提示
+        wait(2)
+        
+        -- 加载并执行第二个脚本
+        local loadSuccess, loadError = pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/chen20110218/ESP_GAME/refs/heads/main/ESP-%E5%89%B2%E8%8D%89%E6%9C%BA.txt", true))()
+        end)
+        
+        if not loadSuccess then
+            warn("加载ESP脚本时出错: " .. tostring(loadError))
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "错误",
+                Text = "加载ESP功能失败",
+                Icon = "",
+                Duration = 5
+            })
+        end
+    else
+        -- 使用游戏弹窗功能
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "服务器检测",
+            Text = "没有扫描到服务器，为您开启通用功能",
+            Icon = "",
+            Duration = 5
+        })
+    end
+end
+
+-- 等待玩家加载完成后执行检测
+game.Players.LocalPlayer:WaitForChild("PlayerGui")
+checkServer()
