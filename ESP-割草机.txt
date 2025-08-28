@@ -1,0 +1,1250 @@
+local Players = game:GetService("Players")
+
+local whitelist = {
+    "qiaoyanbo1234",
+    "qiaoyanbo12",
+    "HYYNO1",
+    "CS78chen",
+    "yufc276",
+    
+}
+
+local whitelistLookup = {}
+for _, name in ipairs(whitelist) do
+    whitelistLookup[name:lower()] = true
+end
+
+local function isPlayerWhitelisted(player)
+    return whitelistLookup[player.Name:lower()] == true
+end
+
+local function onPlayerAdded(player)
+    if not isPlayerWhitelisted(player) then
+        player:Kick("你不在白名单中，无法使用")
+        print("玩家 " .. player.Name .. " 尝试加入但不在白名单中，已被踢出。")
+    else
+        print("玩家 " .. player.Name .. " 在白名单中，允许进入游戏。")
+    end
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+    task.spawn(onPlayerAdded, player)
+end
+
+Players.PlayerAdded:Connect(onPlayerAdded)
+
+print("白名单系统已启动，白名单用户数量: " .. #whitelist)
+print("✅ 等待结束，开始执行主脚本...")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local GuiService = game:GetService("GuiService")
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ColorChangingText"
+screenGui.ResetOnSpawn = false
+screenGui.DisplayOrder = 999
+screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local textLabel = Instance.new("TextLabel")
+textLabel.Size = UDim2.new(1, 0, 1, 0)
+textLabel.Position = UDim2.new(0, 0, 0, 0)
+textLabel.BackgroundTransparency = 1
+textLabel.Text = "🐦欢迎使用ESP，正在为您扫描全图🐦"
+textLabel.Font = Enum.Font.SourceSansBold
+textLabel.TextSize = 36
+textLabel.TextColor3 = Color3.new(1, 1, 1)
+textLabel.TextStrokeTransparency = 0.5
+textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+textLabel.ZIndex = 10
+textLabel.Parent = screenGui
+
+textLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+textLabel.Position = UDim2.new(0.5, 0, 0.5, 0)
+
+local authorLabel = Instance.new("TextLabel")
+authorLabel.Size = UDim2.new(0, 400, 0, 120)
+authorLabel.Position = UDim2.new(1, -410, 0, 10)
+authorLabel.BackgroundTransparency = 1
+authorLabel.Text = "作者:NuoYa"
+authorLabel.Font = Enum.Font.SourceSansBold
+authorLabel.TextSize = 72
+authorLabel.TextColor3 = Color3.new(1, 1, 1)
+authorLabel.TextStrokeTransparency = 0.5
+authorLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+authorLabel.ZIndex = 10
+authorLabel.Parent = screenGui
+
+authorLabel.AnchorPoint = Vector2.new(1, 0)
+authorLabel.Position = UDim2.new(1, -10, 0, 10)
+
+local function changeColor()
+    local time = 0
+    local duration = 5
+    
+    while time < duration do
+        local hue = (tick() * 24) % 360
+        local color = Color3.fromHSV(hue/360, 1, 1)
+        textLabel.TextColor3 = color
+        authorLabel.TextColor3 = color
+        wait(0.05)
+        time = time + 0.05
+    end
+    
+    screenGui:Destroy()
+end
+
+coroutine.wrap(changeColor)()
+local waitTime = 5
+local startTime = tick()
+
+print("⏳ 脚本将在 "..waitTime.." 秒后开始执行...")
+
+while tick() - startTime < waitTime do
+    -- 每隔1秒打印一次剩余时间
+    local remaining = math.floor(waitTime - (tick() - startTime))
+    if remaining ~= lastRemaining then
+        print("🕒 剩余时间: "..remaining.."秒")
+        lastRemaining = remaining
+    end
+    wait(0.1)
+end
+
+print("✅ 等待结束，开始执行主脚本...")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
+
+-- ===== ESP 配置区域 =====
+local SETTINGS = {
+    ENEMY_TAGS = {"Rake", "Monster", "Enemy"},
+    ENEMY_COLOR = Color3.fromRGB(255, 50, 50),
+    
+    PLAYER_COLOR = Color3.fromRGB(50, 150, 255),
+    TEAM_COLOR = Color3.fromRGB(50, 255, 100),
+    
+    SHOW_HEALTH = true,
+    SHOW_DISTANCE = true,
+    SHOW_TRACER = true,
+    TRACER_COLOR = Color3.fromRGB(0, 150, 255),
+    ENEMY_TRACER_COLOR = Color3.fromRGB(255, 50, 50),
+    TRACER_THICKNESS = 0.1,
+    
+    MAX_DISTANCE = 1000,
+    HEALTH_TEXT_SIZE = 16,
+    DISTANCE_TEXT_SIZE = 14,
+    NAME_TEXT_SIZE = 18,
+    UPDATE_RATE = 0.005,
+    
+    SCAN_INTERVAL = 5,
+    TRACER_FOR_ENEMIES = true,
+    
+    HIGHLIGHT_DISABLE_DISTANCE = 7  
+}
+
+local espCache = {}
+local lastScanTime = 0
+
+-- 独立的ESP开关状态
+local playerEspEnabled = true
+local enemyEspEnabled = true
+local trashEspEnabled = true
+
+-- 检查是否应该显示ESP
+local function shouldShowESP(target, data)
+    if not target.Parent then return false end
+    
+    -- 检查是否是敌人
+    local isEnemy = false
+    for _, tag in ipairs(SETTINGS.ENEMY_TAGS) do
+        if target.Name:find(tag) or target:FindFirstChild(tag) then
+            isEnemy = true
+            break
+        end
+    end
+    
+    -- 检查是否是队友
+    local isTeammate = false
+    if not isEnemy and target:FindFirstChild("Team") then
+        if LocalPlayer.Team and target.Team == LocalPlayer.Team then
+            isTeammate = true
+        end
+    end
+    
+    -- 根据类型和开关状态决定是否显示
+    if isEnemy then
+        return enemyEspEnabled
+    elseif isTeammate then
+        return playerEspEnabled
+    else
+        return playerEspEnabled
+    end
+end
+
+local function createESP(target)
+    if not target or not target:FindFirstChild("HumanoidRootPart") then return end
+    
+    if espCache[target] then return end
+    
+    local isEnemy = false
+    local isTeammate = false
+    local espColor = SETTINGS.PLAYER_COLOR
+    
+    for _, tag in ipairs(SETTINGS.ENEMY_TAGS) do
+        if target.Name:find(tag) or target:FindFirstChild(tag) then
+            isEnemy = true
+            espColor = SETTINGS.ENEMY_COLOR
+            break
+        end
+    end
+    
+    if not isEnemy and target:FindFirstChild("Team") then
+        if LocalPlayer.Team and target.Team == LocalPlayer.Team then
+            isTeammate = true
+            espColor = SETTINGS.TEAM_COLOR
+        end
+    end
+    
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "AdvancedESP_Highlight"
+    highlight.FillColor = espColor
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.3
+    highlight.OutlineTransparency = 0
+    highlight.Parent = target
+    
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "AdvancedESP_Billboard"
+    billboard.Adornee = target.HumanoidRootPart
+    billboard.Size = UDim2.new(0, 150, 0, 60)
+    billboard.StudsOffset = Vector3.new(0, 3.5, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = target
+    
+    local distanceText = Instance.new("TextLabel")
+    distanceText.Name = "ESP_Distance"
+    distanceText.Size = UDim2.new(1, 0, 0.3, 0)
+    distanceText.Position = UDim2.new(0, 0, 0, 0)
+    distanceText.BackgroundTransparency = 1
+    distanceText.TextColor3 = Color3.fromRGB(200, 200, 255)
+    distanceText.TextStrokeTransparency = 0.5
+    distanceText.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    distanceText.TextSize = SETTINGS.DISTANCE_TEXT_SIZE
+    distanceText.Font = Enum.Font.SourceSansBold
+    distanceText.TextXAlignment = Enum.TextXAlignment.Center
+    distanceText.Parent = billboard
+    
+    local healthText = Instance.new("TextLabel")
+    healthText.Name = "ESP_Health"
+    healthText.Size = UDim2.new(1, 0, 0.4, 0)
+    healthText.Position = UDim2.new(0, 0, 0.3, 0)
+    healthText.BackgroundTransparency = 1
+    healthText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    healthText.TextStrokeTransparency = 0.5
+    healthText.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    healthText.TextSize = SETTINGS.HEALTH_TEXT_SIZE
+    healthText.Font = Enum.Font.SourceSansBold
+    healthText.TextXAlignment = Enum.TextXAlignment.Center
+    healthText.Parent = billboard
+    
+    local nameText = Instance.new("TextLabel")
+    nameText.Name = "ESP_Name"
+    nameText.Size = UDim2.new(1, 0, 0.3, 0)
+    nameText.Position = UDim2.new(0, 0, 0.7, 0)
+    nameText.BackgroundTransparency = 1
+    nameText.TextColor3 = espColor
+    nameText.TextStrokeTransparency = 0.5
+    nameText.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    nameText.TextSize = SETTINGS.NAME_TEXT_SIZE
+    nameText.Font = Enum.Font.SourceSansBold
+    nameText.TextXAlignment = Enum.TextXAlignment.Center
+    nameText.Parent = billboard
+    
+    local tracer
+    if SETTINGS.SHOW_TRACER and (not isEnemy or SETTINGS.TRACER_FOR_ENEMIES) then
+        local startAttachment = Instance.new("Attachment")
+        startAttachment.Name = "TracerStart"
+        startAttachment.Parent = workspace.CurrentCamera
+        
+        local endAttachment = Instance.new("Attachment")
+        endAttachment.Name = "TracerEnd"
+        endAttachment.Parent = target.HumanoidRootPart
+        
+        tracer = Instance.new("Beam")
+        tracer.Name = "ESP_Tracer"
+        tracer.Attachment0 = startAttachment
+        tracer.Attachment1 = endAttachment
+        tracer.Color = ColorSequence.new(isEnemy and SETTINGS.ENEMY_TRACER_COLOR or SETTINGS.TRACER_COLOR)
+        tracer.Width0 = SETTINGS.TRACER_THICKNESS
+        tracer.Width1 = SETTINGS.TRACER_THICKNESS * 0.8
+        tracer.LightEmission = 0.8
+        tracer.Transparency = NumberSequence.new(0.5)
+        tracer.FaceCamera = true
+        tracer.Parent = target.HumanoidRootPart
+    end
+    
+    espCache[target] = {
+        highlight = highlight,
+        billboard = billboard,
+        tracer = tracer,
+        humanoid = target:FindFirstChildOfClass("Humanoid"),
+        rootPart = target.HumanoidRootPart,
+        startAttachment = tracer and tracer.Attachment0,
+        endAttachment = tracer and tracer.Attachment1,
+        isEnemy = isEnemy,
+        isTeammate = isTeammate
+    }
+end
+
+local function fullScan()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            createESP(player.Character)
+        end
+    end
+    
+    for _, descendant in ipairs(workspace:GetDescendants()) do
+        if descendant:IsA("Model") and descendant:FindFirstChild("HumanoidRootPart") then
+            for _, tag in ipairs(SETTINGS.ENEMY_TAGS) do
+                if descendant.Name:find(tag) or descendant:FindFirstChild(tag) then
+                    createESP(descendant)
+                    break
+                end
+            end
+        end
+    end
+end
+
+-- ===== ESP 更新循环 =====
+local lastUpdate = 0
+
+RunService.Heartbeat:Connect(function(deltaTime)
+    lastUpdate = lastUpdate + deltaTime
+    lastScanTime = lastScanTime + deltaTime
+    
+    if lastScanTime >= SETTINGS.SCAN_INTERVAL then
+        lastScanTime = 0
+        fullScan()
+    end
+    
+    if lastUpdate < SETTINGS.UPDATE_RATE then return end
+    lastUpdate = 0
+    
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
+    local localRoot = LocalPlayer.Character.HumanoidRootPart
+    
+    for target, data in pairs(espCache) do
+        if not target.Parent then
+            if data.highlight then data.highlight:Destroy() end
+            if data.billboard then data.billboard:Destroy() end
+            if data.tracer then data.tracer:Destroy() end
+            espCache[target] = nil
+        else
+            local distance = (data.rootPart.Position - localRoot.Position).Magnitude
+            local distanceInMeters = distance / 3.571  -- 转换为米
+            local shouldShow = distance <= SETTINGS.MAX_DISTANCE and shouldShowESP(target, data)
+            
+            -- 显示/隐藏Billboard和Tracer
+            data.billboard.Enabled = shouldShow
+            if data.tracer then
+                data.tracer.Enabled = shouldShow
+                if data.startAttachment then
+                    data.startAttachment.WorldPosition = localRoot.Position - Vector3.new(0, 1.5, 0)
+                end
+            end
+            
+            -- ===== 优化：距离小于7米时关闭高亮 =====
+            if shouldShow then
+                -- 当距离小于配置值时关闭高亮
+                if distanceInMeters < SETTINGS.HIGHLIGHT_DISABLE_DISTANCE then
+                    data.highlight.Enabled = false
+                else
+                    data.highlight.Enabled = true
+                end
+            else
+                data.highlight.Enabled = false
+            end
+            
+            -- 更新文本信息
+            if shouldShow then
+                if SETTINGS.SHOW_DISTANCE then
+                    data.billboard.ESP_Distance.Text = string.format("%.1fm", distanceInMeters)
+                else
+                    data.billboard.ESP_Distance.Text = ""
+                end
+                
+                if SETTINGS.SHOW_HEALTH and data.humanoid then
+                    data.billboard.ESP_Health.Text = string.format("HP: %d/%d", 
+                        math.floor(data.humanoid.Health), 
+                        math.floor(data.humanoid.MaxHealth))
+                else
+                    data.billboard.ESP_Health.Text = ""
+                end
+                
+                data.billboard.ESP_Name.Text = target.Name
+            end
+        end
+    end
+end)
+
+-- ===== ESP 初始化和事件监听 =====
+fullScan()
+
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function(character)
+        createESP(character)
+    end)
+end)
+
+workspace.DescendantAdded:Connect(function(descendant)
+    if descendant:IsA("Model") and descendant:FindFirstChild("HumanoidRootPart") then
+        for _, tag in ipairs(SETTINGS.ENEMY_TAGS) do
+            if descendant.Name:find(tag) or descendant:FindFirstChild(tag) then
+                createESP(descendant)
+                break
+            end
+        end
+    end
+end)
+
+LocalPlayer.CharacterRemoving:Connect(function()
+    for _, data in pairs(espCache) do
+        if data.highlight then data.highlight:Destroy() end
+        if data.billboard then data.billboard:Destroy() end
+        if data.tracer then data.tracer:Destroy() end
+    end
+    espCache = {}
+end)
+
+-- ===== 夜视脚本 =====
+local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
+
+-- 保存原始设置
+local originalBrightness = Lighting.Brightness
+local originalExposureCompensation = Lighting.ExposureCompensation
+local originalClockTime = Lighting.ClockTime
+local originalFogEnd = Lighting.FogEnd
+
+-- 夜视状态变量 - 修改：默认开启夜视功能
+local nightVisionEnabled = true
+local nightVisionConnection
+
+-- 创建适度亮度增强效果
+local function enableNightVision()
+    -- 适度提高亮度和曝光度
+    Lighting.Brightness = 1.8  -- 适度提高整体亮度
+    Lighting.ExposureCompensation = 1.4  -- 再次微调曝光补偿（从1.45降低到1.4）
+    
+    -- 强制设置为白天时间
+    Lighting.ClockTime = 12  -- 中午12点，适中的日照时间
+    
+    -- 适度增加雾效距离
+    if Lighting.FogEnd < 5000 then
+        Lighting.FogEnd = 5000  -- 适度增加雾效结束距离
+    end
+    
+    -- 添加轻微的Bloom效果
+    if not Lighting:FindFirstChild("NightVisionBloom") then
+        local bloom = Instance.new("BloomEffect")
+        bloom.Name = "NightVisionBloom"
+        bloom.Intensity = 0.1   -- 轻微光晕效果
+        bloom.Threshold = 0.85  -- 提高阈值，减少光晕范围
+        bloom.Size = 16         -- 适中的光晕尺寸
+        bloom.Parent = Lighting
+    end
+    
+    -- 添加轻微的颜色校正效果
+    if not Lighting:FindFirstChild("NightVisionColorCorrection") then
+        local colorCorrection = Instance.new("ColorCorrectionEffect")
+        colorCorrection.Name = "NightVisionColorCorrection"
+        colorCorrection.Brightness = 0.12  -- 轻微提高亮度
+        colorCorrection.Contrast = 0.2     -- 适度增强对比度
+        colorCorrection.Saturation = 0     -- 完全保持原始颜色
+        colorCorrection.TintColor = Color3.fromRGB(255, 255, 255)  -- 纯白色，不改变色调
+        colorCorrection.Parent = Lighting
+    end
+    
+    -- 启动更新循环
+    if nightVisionConnection then
+        nightVisionConnection:Disconnect()
+    end
+    
+    nightVisionConnection = RunService.RenderStepped:Connect(function()
+        -- 确保亮度和曝光设置不会被其他脚本覆盖
+        if Lighting.Brightness < 1.6 then
+            Lighting.Brightness = 1.8
+        end
+        
+        if Lighting.ExposureCompensation < 1.3 then
+            Lighting.ExposureCompensation = 1.4  -- 确保曝光补偿保持在1.4
+        end
+        
+        -- 确保时间保持在白天
+        if Lighting.ClockTime < 8 or Lighting.ClockTime > 16 then
+            Lighting.ClockTime = 12  -- 中午12点
+        end
+        
+        -- 确保雾效距离足够远
+        if Lighting.FogEnd < 5000 then
+            Lighting.FogEnd = 5000
+        end
+        
+        -- 确保Bloom效果存在
+        if not Lighting:FindFirstChild("NightVisionBloom") then
+            local bloom = Instance.new("BloomEffect")
+            bloom.Name = "NightVisionBloom"
+            bloom.Intensity = 0.1
+            bloom.Threshold = 0.85
+            bloom.Size = 16
+            bloom.Parent = Lighting
+        end
+        
+        -- 确保颜色校正效果存在
+        if not Lighting:FindFirstChild("NightVisionColorCorrection") then
+            local colorCorrection = Instance.new("ColorCorrectionEffect")
+            colorCorrection.Name = "NightVisionColorCorrection"
+            colorCorrection.Brightness = 0.12
+            colorCorrection.Contrast = 0.2
+            colorCorrection.Saturation = 0
+            colorCorrection.TintColor = Color3.fromRGB(255, 255, 255)
+            colorCorrection.Parent = Lighting
+        end
+    end)
+end
+
+-- 清理函数
+local function disableNightVision()
+    if nightVisionConnection then
+        nightVisionConnection:Disconnect()
+        nightVisionConnection = nil
+    end
+    
+    -- 恢复原始设置
+    Lighting.Brightness = originalBrightness
+    Lighting.ExposureCompensation = originalExposureCompensation
+    Lighting.ClockTime = originalClockTime
+    Lighting.FogEnd = originalFogEnd
+    
+    -- 移除添加的效果
+    local bloom = Lighting:FindFirstChild("NightVisionBloom")
+    if bloom then
+        bloom:Destroy()
+    end
+    
+    local colorCorrection = Lighting:FindFirstChild("NightVisionColorCorrection")
+    if colorCorrection then
+        colorCorrection:Destroy()
+    end
+end
+
+-- 夜视切换函数
+local function toggleNightVision()
+    nightVisionEnabled = not nightVisionEnabled
+    
+    if nightVisionEnabled then
+        enableNightVision()
+        print("夜视功能已启用")
+    else
+        disableNightVision()
+        print("夜视功能已禁用")
+    end
+    
+    return nightVisionEnabled
+end
+
+-- 游戏关闭时自动清理
+game:GetService("Players").LocalPlayer:GetPropertyChangedSignal("Parent"):Connect(function()
+    if not game:GetService("Players").LocalPlayer.Parent then
+        disableNightVision()
+    end
+end)
+
+-- ===== 高级废料透视脚本 =====
+-- 支持全图扫描、距离显示和文字标签
+
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+-- 配置参数
+local config = {
+    maxDistance = 2000, -- 最大检测距离(stud)
+    highlightColor = Color3.fromRGB(0, 255, 0), -- 高亮颜色
+    highlightTransparency = 0.3, -- 透明度
+    scanInterval = 1, -- 全图扫描间隔(秒)
+    updateInterval = 0.1, -- 更新间隔(秒)
+    labelColor = Color3.fromRGB(255, 255, 255), -- 标签颜色
+    labelSize = 15, -- 标签字体大小
+    maxLabels = 50, -- 最大显示标签数量
+    tagPrefix = "[废料]", -- 标签前缀
+    scanKey = Enum.KeyCode.T -- 全图扫描快捷键
+}
+
+-- 本地变量
+local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local camera = workspace.CurrentCamera
+
+-- 存储已高亮的废料
+local highlightedTrash = {}
+local trashCache = {}
+local lastScanTimeTrash = 0
+local scanning = false
+
+-- 转换stud为米的函数
+local function studsToMeters(studs)
+    return studs / 3.571
+end
+
+-- 创建标签函数
+local function createLabel(trashPart, distanceInStuds)
+    if not trashPart:FindFirstChild("TrashLabel") then
+        local billboard = Instance.new("BillboardGui")
+        billboard.Name = "TrashLabel"
+        billboard.AlwaysOnTop = true
+        billboard.Size = UDim2.new(0, 200, 0, 50)
+        billboard.StudsOffset = Vector3.new(0, 2, 0)
+        billboard.Adornee = trashPart
+        billboard.MaxDistance = config.maxDistance
+        
+        local textLabel = Instance.new("TextLabel")
+        textLabel.Size = UDim2.new(1, 0, 1, 0)
+        textLabel.BackgroundTransparency = 1
+        textLabel.Text = string.format("%s\n%.1f米", config.tagPrefix, studsToMeters(distanceInStuds))
+        textLabel.TextColor3 = config.labelColor
+        textLabel.TextSize = config.labelSize
+        textLabel.Font = Enum.Font.SourceSansBold
+        textLabel.TextStrokeTransparency = 0.5
+        textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+        
+        textLabel.Parent = billboard
+        billboard.Parent = trashPart
+        
+        return billboard
+    end
+    return trashPart:FindFirstChild("TrashLabel")
+end
+
+-- 更新标签距离
+local function updateLabel(trashPart, distanceInStuds)
+    local label = trashPart:FindFirstChild("TrashLabel")
+    if label then
+        label.TextLabel.Text = string.format("%s\n%.1f米", config.tagPrefix, studsToMeters(distanceInStuds))
+        
+        -- 根据距离调整标签大小
+        local scale = math.clamp(1 - (distanceInStuds / config.maxDistance) * 0.5, 0.5, 1)
+        label.TextLabel.TextSize = config.labelSize * scale
+    end
+end
+
+-- 高亮废料的函数
+local function highlightTrash(trashPart)
+    if not highlightedTrash[trashPart] then
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "TrashHighlight"
+        highlight.FillColor = config.highlightColor
+        highlight.FillTransparency = config.highlightTransparency
+        highlight.OutlineColor = config.highlightColor
+        highlight.OutlineTransparency = 0
+        highlight.Adornee = trashPart
+        highlight.Parent = trashPart
+        
+        highlightedTrash[trashPart] = highlight
+    end
+end
+
+-- 全图扫描废料
+local function fullScanTrash()
+    if scanning or not trashEspEnabled then return end
+    scanning = true
+    
+    local startTime = os.clock()
+    trashCache = {}
+    
+    -- 扩展搜索条件
+    local trashKeywords = {"trash", "scrap", "junk", "waste", "debris", "rubbish", "garbage", "废料", "垃圾"}
+    
+    -- 扫描工作区
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") then
+            local lowerName = obj.Name:lower()
+            for _, keyword in ipairs(trashKeywords) do
+                if lowerName:find(keyword) then
+                    table.insert(trashCache, obj)
+                    break
+                end
+            end
+        end
+    end
+    
+    -- 扫描模型
+    for _, model in ipairs(workspace:GetChildren()) do
+        if model:IsA("Model") then
+            local lowerName = model.Name:lower()
+            for _, keyword in ipairs(trashKeywords) do
+                if lowerName:find(keyword) then
+                    for _, part in ipairs(model:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            table.insert(trashCache, part)
+                        end
+                    end
+                    break
+                end
+            end
+        end
+    end
+    
+    scanning = false
+    lastScanTimeTrash = os.clock()
+    print(string.format("全图扫描完成，找到 %d 个废料，耗时 %.2f 秒", #trashCache, os.clock() - startTime))
+end
+
+-- 清除不再需要的废料高亮
+local function cleanUpHighlights(currentTrash)
+    for trashPart, highlight in pairs(highlightedTrash) do
+        if not table.find(currentTrash, trashPart) then
+            if highlight then highlight:Destroy() end
+            local label = trashPart:FindFirstChild("TrashLabel")
+            if label then label:Destroy() end
+            highlightedTrash[trashPart] = nil
+        end
+    end
+end
+
+-- 更新附近的废料显示
+local function updateNearbyTrash()
+    if not trashEspEnabled then
+        cleanUpHighlights({})
+        return
+    end
+    
+    if not humanoidRootPart or not humanoidRootPart:IsDescendantOf(workspace) then
+        return
+    end
+    
+    local currentTime = os.clock()
+    if currentTime - lastScanTimeTrash > config.scanInterval then
+        task.spawn(fullScanTrash)
+    end
+    
+    local nearbyTrash = {}
+    local playerPos = humanoidRootPart.Position
+    
+    -- 按距离排序
+    table.sort(trashCache, function(a, b)
+        return (playerPos - a.Position).Magnitude < (playerPos - b.Position).Magnitude
+    end)
+    
+    -- 只显示最近的maxLabels个废料
+    local displayCount = 0
+    for _, trashPart in ipairs(trashCache) do
+        if displayCount >= config.maxLabels then break end
+        
+        local distance = (playerPos - trashPart.Position).Magnitude
+        if distance <= config.maxDistance then
+            table.insert(nearbyTrash, trashPart)
+            highlightTrash(trashPart)
+            local label = createLabel(trashPart, distance)
+            updateLabel(trashPart, distance)
+            displayCount += 1
+        end
+    end
+    
+    cleanUpHighlights(nearbyTrash)
+end
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == config.scanKey and trashEspEnabled then
+        fullScanTrash()
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    updateNearbyTrash()
+end)
+
+LocalPlayer.CharacterAdded:Connect(function(newChar)
+    character = newChar
+    humanoidRootPart = newChar:WaitForChild("HumanoidRootPart")
+end)
+
+task.spawn(fullScanTrash)
+
+print("高级废料透视脚本已激活")
+print(string.format("按 %s 键手动触发全图扫描", config.scanKey.Name))
+
+-- ===== 玩家加速脚本 =====
+local speedMultiplier = 2  -- 固定速度倍增系数
+local defaultWalkSpeed = 16  -- 默认速度
+local isSpeeding = false
+local speedConnection
+
+-- 设置速度应用
+local function setupSpeedApplication()
+    if speedConnection then
+        speedConnection:Disconnect()
+    end
+    
+    speedConnection = RunService.RenderStepped:Connect(function(deltaTime)
+        if isSpeeding and LocalPlayer.Character then
+            local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Parent then
+                -- 高频应用速度效果
+                humanoid.WalkSpeed = defaultWalkSpeed * speedMultiplier
+            end
+        end
+    end)
+end
+
+-- 初始化速度应用
+setupSpeedApplication()
+
+-- 开启加速功能
+isSpeeding = true
+
+-- 角色重新生成时重置速度和引用
+LocalPlayer.CharacterAdded:Connect(function(newCharacter)
+    character = newCharacter
+    local humanoid = character:WaitForChild("Humanoid")
+    defaultWalkSpeed = humanoid.WalkSpeed
+    
+    -- 重新设置速度应用
+    setupSpeedApplication()
+    
+    -- 保持加速状态
+    isSpeeding = true
+end)
+
+-- 游戏退出时重置速度
+Players.PlayerRemoving:Connect(function(leavingPlayer)
+    if leavingPlayer == LocalPlayer then
+        local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid and humanoid.Parent then
+            humanoid.WalkSpeed = defaultWalkSpeed
+        end
+        if speedConnection then
+            speedConnection:Disconnect()
+        end
+    end
+end)
+
+-- ===== 圆形悬浮窗与动画按钮 =====
+local function createCircularMenu()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "CircularMenuGUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    
+    -- 圆形主按钮 - 屏幕正右边中间位置
+    local mainButton = Instance.new("ImageButton")
+    mainButton.Name = "MainButton"
+    mainButton.Size = UDim2.new(0, 50, 0, 50)
+    mainButton.Position = UDim2.new(1, -60, 0.5, -25)
+    mainButton.AnchorPoint = Vector2.new(0, 0.5)
+    mainButton.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    mainButton.AutoButtonColor = true
+    
+    -- 圆形外观
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = mainButton
+    
+    -- 添加NY图案
+    local nyLabel = Instance.new("TextLabel")
+    nyLabel.Name = "NYLabel"
+    nyLabel.Size = UDim2.new(1, 0, 1, 0)
+    nyLabel.BackgroundTransparency = 1
+    nyLabel.Text = "NY"
+    nyLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
+    nyLabel.TextSize = 20
+    nyLabel.Font = Enum.Font.SourceSansBold
+    nyLabel.Parent = mainButton
+    
+    -- 发光效果
+    local glow = Instance.new("UIStroke")
+    glow.Name = "Glow"
+    glow.Color = Color3.fromRGB(100, 150, 255)
+    glow.Thickness = 2
+    glow.Transparency = 0.5
+    glow.Parent = mainButton
+    
+    mainButton.Parent = screenGui
+    
+    -- 功能按钮容器
+    local buttonContainer = Instance.new("Frame")
+    buttonContainer.Name = "ButtonContainer"
+    buttonContainer.Size = UDim2.new(0, 0, 0, 0)
+    buttonContainer.Position = UDim2.new(0.5, 0, 0.5, 0)
+    buttonContainer.AnchorPoint = Vector2.new(0.5, 0.5)
+    buttonContainer.BackgroundTransparency = 1
+    buttonContainer.Visible = false
+    buttonContainer.Parent = screenGui
+    
+    -- 创建玩家ESP开关按钮
+    local playerEspButton = Instance.new("TextButton")
+    playerEspButton.Name = "PlayerESPButton"
+    playerEspButton.Size = UDim2.new(0, 120, 0, 30)
+    playerEspButton.Position = UDim2.new(0, 0, 0, 0)
+    playerEspButton.BackgroundColor3 = playerEspEnabled and Color3.fromRGB(50, 200, 80) or Color3.fromRGB(200, 50, 50)
+    playerEspButton.Text = playerEspEnabled and "玩家ESP开启" or "玩家ESP关闭"
+    playerEspButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    playerEspButton.TextSize = 14
+    playerEspButton.Font = Enum.Font.SourceSansBold
+    playerEspButton.AutoButtonColor = true
+    playerEspButton.Visible = false
+    
+    -- 圆角
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0.2, 0)
+    buttonCorner.Parent = playerEspButton
+    
+    -- 创建敌人ESP开关按钮
+    local enemyEspButton = Instance.new("TextButton")
+    enemyEspButton.Name = "EnemyESPButton"
+    enemyEspButton.Size = UDim2.new(0, 120, 0, 30)
+    enemyEspButton.Position = UDim2.new(0, 0, 0, 0)
+    enemyEspButton.BackgroundColor3 = enemyEspEnabled and Color3.fromRGB(200, 50, 50) or Color3.fromRGB(100, 100, 100)
+    enemyEspButton.Text = enemyEspEnabled and "敌人ESP开启" or "敌人ESP关闭"
+    enemyEspButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    enemyEspButton.TextSize = 14
+    enemyEspButton.Font = Enum.Font.SourceSansBold
+    enemyEspButton.AutoButtonColor = true
+    enemyEspButton.Visible = false
+    
+    local buttonCorner2 = Instance.new("UICorner")
+    buttonCorner2.CornerRadius = UDim.new(0.2, 0)
+    buttonCorner2.Parent = enemyEspButton
+    
+    -- 创建废料ESP开关按钮
+    local trashEspButton = Instance.new("TextButton")
+    trashEspButton.Name = "TrashESPButton"
+    trashEspButton.Size = UDim2.new(0, 120, 0, 30)
+    trashEspButton.Position = UDim2.new(0, 0, 0, 0)
+    trashEspButton.BackgroundColor3 = trashEspEnabled and Color3.fromRGB(50, 150, 255) or Color3.fromRGB(100, 100, 100)
+    trashEspButton.Text = trashEspEnabled and "废料ESP开启" or "废料ESP关闭"
+    trashEspButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    trashEspButton.TextSize = 14
+    trashEspButton.Font = Enum.Font.SourceSansBold
+    trashEspButton.AutoButtonColor = true
+    trashEspButton.Visible = false
+    
+    local buttonCorner3 = Instance.new("UICorner")
+    buttonCorner3.CornerRadius = UDim.new(0.2, 0)
+    buttonCorner3.Parent = trashEspButton
+    
+    -- 创建夜视开关按钮
+    local nightVisionToggleButton = Instance.new("TextButton")
+    nightVisionToggleButton.Name = "NightVisionToggleButton"
+    nightVisionToggleButton.Size = UDim2.new(0, 120, 0, 30)
+    nightVisionToggleButton.Position = UDim2.new(0, 0, 0, 0)
+    nightVisionToggleButton.BackgroundColor3 = nightVisionEnabled and Color3.fromRGB(50, 200, 200) or Color3.fromRGB(100, 100, 150)
+    nightVisionToggleButton.Text = nightVisionEnabled and "夜视开启" or "夜视关闭"
+    nightVisionToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nightVisionToggleButton.TextSize = 14
+    nightVisionToggleButton.Font = Enum.Font.SourceSansBold
+    nightVisionToggleButton.AutoButtonColor = true
+    nightVisionToggleButton.Visible = false
+    
+    local buttonCorner4 = Instance.new("UICorner")
+    buttonCorner4.CornerRadius = UDim.new(0.2, 0)
+    buttonCorner4.Parent = nightVisionToggleButton
+    
+    -- 创建加速开关按钮
+    local speedToggleButton = Instance.new("TextButton")
+    speedToggleButton.Name = "SpeedToggleButton"
+    speedToggleButton.Size = UDim2.new(0, 120, 0, 30)
+    speedToggleButton.Position = UDim2.new(0, 0, 0, 0)
+    speedToggleButton.BackgroundColor3 = isSpeeding and Color3.fromRGB(255, 150, 50) or Color3.fromRGB(100, 100, 100)
+    speedToggleButton.Text = isSpeeding and "加速开启" or "加速关闭"
+    speedToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    speedToggleButton.TextSize = 14
+    speedToggleButton.Font = Enum.Font.SourceSansBold
+    speedToggleButton.AutoButtonColor = true
+    speedToggleButton.Visible = false
+    
+    local buttonCorner5 = Instance.new("UICorner")
+    buttonCorner5.CornerRadius = UDim.new(0.2, 0)
+    buttonCorner5.Parent = speedToggleButton
+    
+    -- 菜单状态
+    local menuExpanded = false
+    
+    -- 展开/收起菜单的函数
+    local function toggleMenu()
+        menuExpanded = not menuExpanded
+        
+        if menuExpanded then
+            -- 显示容器
+            buttonContainer.Visible = true
+            
+            -- 展开容器
+            local expandTween = TweenService:Create(
+                buttonContainer,
+                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {Size = UDim2.new(0, 150, 0, 180)}
+            )
+            expandTween:Play()
+            
+            -- 显示并动画移动按钮
+            playerEspButton.Parent = buttonContainer
+            enemyEspButton.Parent = buttonContainer
+            trashEspButton.Parent = buttonContainer
+            nightVisionToggleButton.Parent = buttonContainer
+            speedToggleButton.Parent = buttonContainer
+            
+            playerEspButton.Visible = true
+            enemyEspButton.Visible = true
+            trashEspButton.Visible = true
+            nightVisionToggleButton.Visible = true
+            speedToggleButton.Visible = true
+            
+            -- 玩家ESP按钮动画
+            local playerEspTween = TweenService:Create(
+                playerEspButton,
+                TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                {Position = UDim2.new(0, 15, 0, 10)}
+            )
+            playerEspTween:Play()
+            
+            -- 敌人ESP按钮动画
+            local enemyEspTween = TweenService:Create(
+                enemyEspButton,
+                TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0.1),
+                {Position = UDim2.new(0, 15, 0, 50)}
+            )
+            enemyEspTween:Play()
+            
+            -- 废料ESP按钮动画
+            local trashEspTween = TweenService:Create(
+                trashEspButton,
+                TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0.2),
+                {Position = UDim2.new(0, 15, 0, 90)}
+            )
+            trashEspTween:Play()
+            
+            -- 夜视按钮动画
+            local nightVisionTween = TweenService:Create(
+                nightVisionToggleButton,
+                TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0.3),
+                {Position = UDim2.new(0, 15, 0, 130)}
+            )
+            nightVisionTween:Play()
+            
+            -- 加速按钮动画
+            local speedTween = TweenService:Create(
+                speedToggleButton,
+                TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0.4),
+                {Position = UDim2.new(0, 15, 0, 170)}
+            )
+            speedTween:Play()
+        else
+            -- 收起按钮
+            local playerEspTween = TweenService:Create(
+                playerEspButton,
+                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {Position = UDim2.new(0, 0, 0, 0)}
+            )
+            playerEspTween:Play()
+            
+            local enemyEspTween = TweenService:Create(
+                enemyEspButton,
+                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {Position = UDim2.new(0, 0, 0, 0)}
+            )
+            enemyEspTween:Play()
+            
+            local trashEspTween = TweenService:Create(
+                trashEspButton,
+                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {Position = UDim2.new(0, 0, 0, 0)}
+            )
+            trashEspTween:Play()
+            
+            local nightVisionTween = TweenService:Create(
+                nightVisionToggleButton,
+                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {Position = UDim2.new(0, 0, 0, 0)}
+            )
+            nightVisionTween:Play()
+            
+            local speedTween = TweenService:Create(
+                speedToggleButton,
+                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {Position = UDim2.new(0, 0, 0, 0)}
+            )
+            speedTween:Play()
+            
+            -- 延迟后隐藏容器
+            task.delay(0.3, function()
+                if not menuExpanded then
+                    buttonContainer.Visible = false
+                    playerEspButton.Visible = false
+                    enemyEspButton.Visible = false
+                    trashEspButton.Visible = false
+                    nightVisionToggleButton.Visible = false
+                    speedToggleButton.Visible = false
+                    
+                    -- 收起容器
+                    local collapseTween = TweenService:Create(
+                        buttonContainer,
+                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                        {Size = UDim2.new(0, 0, 0, 0)}
+                    )
+                    collapseTween:Play()
+                end
+            end)
+        end
+    end
+    
+    -- 主按钮点击事件
+    mainButton.MouseButton1Click:Connect(toggleMenu)
+    
+    -- 玩家ESP按钮点击事件
+    playerEspButton.MouseButton1Click:Connect(function()
+        playerEspEnabled = not playerEspEnabled
+        
+        playerEspButton.BackgroundColor3 = playerEspEnabled and Color3.fromRGB(50, 200, 80) or Color3.fromRGB(200, 50, 50)
+        playerEspButton.Text = playerEspEnabled and "玩家ESP开启" or "玩家ESP关闭"
+        
+        -- 更新所有玩家ESP的显示状态
+        for target, data in pairs(espCache) do
+            if not data.isEnemy then
+                local shouldShow = shouldShowESP(target, data)
+                if data.highlight then
+                    data.highlight.Enabled = shouldShow
+                end
+                if data.billboard then
+                    data.billboard.Enabled = shouldShow
+                end
+                if data.tracer then
+                    data.tracer.Enabled = shouldShow
+                end
+            end
+        end
+    end)
+    
+    -- 敌人ESP按钮点击事件
+    enemyEspButton.MouseButton1Click:Connect(function()
+        enemyEspEnabled = not enemyEspEnabled
+        
+        enemyEspButton.BackgroundColor3 = enemyEspEnabled and Color3.fromRGB(200, 50, 50) or Color3.fromRGB(100, 100, 100)
+        enemyEspButton.Text = enemyEspEnabled and "敌人ESP开启" or "敌人ESP关闭"
+        
+        -- 更新所有敌人ESP的显示状态
+        for target, data in pairs(espCache) do
+            if data.isEnemy then
+                local shouldShow = shouldShowESP(target, data)
+                if data.highlight then
+                    data.highlight.Enabled = shouldShow
+                end
+                if data.billboard then
+                    data.billboard.Enabled = shouldShow
+                end
+                if data.tracer then
+                    data.tracer.Enabled = shouldShow
+                end
+            end
+        end
+    end)
+    
+    -- 废料ESP按钮点击事件
+    trashEspButton.MouseButton1Click:Connect(function()
+        trashEspEnabled = not trashEspEnabled
+        
+        trashEspButton.BackgroundColor3 = trashEspEnabled and Color3.fromRGB(50, 150, 255) or Color3.fromRGB(100, 100, 100)
+        trashEspButton.Text = trashEspEnabled and "废料ESP开启" or "废料ESP关闭"
+        
+        if not trashEspEnabled then
+            -- 清除所有废料高亮
+            for trashPart, highlight in pairs(highlightedTrash) do
+                if highlight then highlight:Destroy() end
+                local label = trashPart:FindFirstChild("TrashLabel")
+                if label then label:Destroy() end
+                highlightedTrash[trashPart] = nil
+            end
+        else
+            -- 重新扫描废料
+            task.spawn(fullScanTrash)
+        end
+    end)
+    
+    -- 夜视按钮点击事件
+    nightVisionToggleButton.MouseButton1Click:Connect(function()
+        local newState = toggleNightVision()
+        
+        nightVisionToggleButton.BackgroundColor3 = newState and Color3.fromRGB(50, 200, 200) or Color3.fromRGB(100, 100, 150)
+        nightVisionToggleButton.Text = newState and "夜视开启" or "夜视关闭"
+    end)
+    
+    -- 加速按钮点击事件
+    speedToggleButton.MouseButton1Click:Connect(function()
+        isSpeeding = not isSpeeding
+        
+        speedToggleButton.BackgroundColor3 = isSpeeding and Color3.fromRGB(255, 150, 50) or Color3.fromRGB(100, 100, 100)
+        speedToggleButton.Text = isSpeeding and "加速开启" or "加速关闭"
+        
+        -- 应用或取消加速效果
+        if isSpeeding then
+            setupSpeedApplication()
+        else
+            -- 取消加速，恢复默认速度
+            local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Parent then
+                humanoid.WalkSpeed = defaultWalkSpeed
+            end
+        end
+    end)
+    
+    -- 拖拽功能
+    local dragging
+    local dragInput
+    local dragStart
+    local startPos
+    
+    local function update(input)
+        local delta = input.Position - dragStart
+        mainButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        buttonContainer.Position = UDim2.new(0.5, 0, 0.5, 0) -- 保持按钮容器在屏幕中心
+    end
+    
+    mainButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = mainButton.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    mainButton.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            update(input)
+        end
+    end)
+    
+    return screenGui
+end
+
+-- 创建圆形菜单
+createCircularMenu()
+
+-- 默认启用夜视
+enableNightVision()
+print("夜视功能已默认启用")
+print("圆形悬浮菜单已创建 - 点击右侧的NY按钮展开功能菜单")
+print("玩家ESP: " .. (playerEspEnabled and "开启" or "关闭"))
+print("敌人ESP: " .. (enemyEspEnabled and "开启" or "关闭"))
+print("废料ESP: " .. (trashEspEnabled and "开启" or "关闭"))
+print("加速功能: " .. (isSpeeding and "开启" or "关闭"))
