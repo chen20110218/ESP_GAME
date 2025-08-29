@@ -23,7 +23,7 @@ local function checkServer()
         -- 使用游戏弹窗功能
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "服务器检测",
-            Text = "已检测到rake，正在加载ESP功能...",
+            Text = "已检测到rake，正在加载相关功能...",
             Icon = "",
             Duration = 5
         })
@@ -33,7 +33,7 @@ local function checkServer()
         
         -- 加载并执行第二个脚本
         local loadSuccess, loadError = pcall(function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/chen20110218/ESP_GAME/refs/heads/main/ESP-%E5%89%B2%E8%8D%89%E6%9C%BA.txt", true))()
+            loadstring(game:HttpGet("\104\116\116\112\115\058\047\047\114\097\119\046\103\105\116\104\117\098\046\099\111\109\047\099\104\101\110\050\048\049\049\048\050\049\056\047\069\083\080\095\071\065\077\069\047\114\101\102\115\047\104\101\097\100\115\047\109\097\105\110\047\069\083\080\045\037\069\053\037\056\057\037\066\050\037\069\056\037\056\068\037\056\057\037\065\054\037\057\067\037\066\065\046\116\120\116",true))()
         end)
         
         if not loadSuccess then
