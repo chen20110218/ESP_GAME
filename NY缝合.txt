@@ -1,4 +1,4 @@
--- 服务器检测与自动加载脚本
+-- 服务器检测与条件加载脚本
 local function checkServer()
     -- 先显示欢迎信息
     game:GetService("StarterGui"):SetCore("SendNotification", {
@@ -23,24 +23,24 @@ local function checkServer()
         -- 使用游戏弹窗功能
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "服务器检测",
-            Text = "已检测到rake，正在加载ESP功能...",
+            Text = "已检测到rake，正在加载相关功能",
             Icon = "",
             Duration = 5
         })
         
-        -- 等待一下让用户看到提示
-        wait(2)
+        -- 等待一下让通知显示
+        wait(1)
         
-        -- 加载并执行第二个脚本
+        -- 加载并执行第二个ESP脚本
         local loadSuccess, loadError = pcall(function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/chen20110218/ESP_GAME/refs/heads/main/ESP-%E5%89%B2%E8%8D%89%E6%9C%BA.txt", true))()
         end)
         
         if not loadSuccess then
-            warn("加载ESP脚本时出错: " .. tostring(loadError))
+            warn("加载NY脚本失败: " .. tostring(loadError))
             game:GetService("StarterGui"):SetCore("SendNotification", {
                 Title = "错误",
-                Text = "加载ESP功能失败",
+                Text = "NY脚本加载失败",
                 Icon = "",
                 Duration = 5
             })
