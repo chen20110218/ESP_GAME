@@ -1,3 +1,43 @@
+local Players = game:GetService("Players")
+
+local whitelist = {
+    "qiaoyanbo1234",
+    "qiaoyanbo12",
+    "HYYNO1",
+    "CS78chen",
+    "yufc276",
+    
+}
+
+local whitelistLookup = {}
+for _, name in ipairs(whitelist) do
+    whitelistLookup[name:lower()] = true
+end
+
+local function isPlayerWhitelisted(player)
+    return whitelistLookup[player.Name:lower()] == true
+end
+
+local function onPlayerAdded(player)
+    if not isPlayerWhitelisted(player) then
+        player:Kick("你不在白名单中，无法使用")
+        print("玩家 " .. player.Name .. " 尝试加入但不在白名单中，已被踢出。")
+    else
+        print("玩家 " .. player.Name .. " 在白名单中，允许进入游戏。")
+    end
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+    task.spawn(onPlayerAdded, player)
+end
+
+Players.PlayerAdded:Connect(onPlayerAdded)
+
+print("白名单系统已启动，白名单用户数量: " .. #whitelist)
+print("✅ 等待结束，开始执行主脚本...")
+
+-- 在这里拼接你的主脚本
+-- 你的主脚本内容从这里开始...
 -- 服务器检测与条件加载脚本
 local function checkServer()
     -- 先显示欢迎信息
