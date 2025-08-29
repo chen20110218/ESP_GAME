@@ -116,12 +116,6 @@ local LocalPlayer = Players.LocalPlayer
 local TweenService = game:GetService("TweenService")
 
 -- ===== ESP 配置区域 =====
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
-local TweenService = game:GetService("TweenService")
-
--- ===== ESP 配置区域 =====
 local SETTINGS = {
     ENEMY_TAGS = {"Rake", "Monster", "Enemy"},
     ENEMY_COLOR = Color3.fromRGB(255, 50, 50),
@@ -782,22 +776,56 @@ print(string.format("按 %s 键手动触发全图扫描", config.scanKey.Name))
 -- ===== 玩家加速脚本 =====
 local speedMultiplier = 2  -- 固定速度倍增系数
 local defaultWalkSpeed = 16  -- 默认速度
-local isSpeeding = false
+local isSpeeding = true  -- 默认开启加速
 local speedConnection
+local currentHumanoid
+
+-- 安全设置速度的函数
+local function setWalkSpeedSafe(humanoid, speed)
+    if humanoid and humanoid.Parent and humanoid:IsA("Humanoid") then
+        pcall(function()
+            humanoid.WalkSpeed = speed
+        end)
+    end
+end
 
 -- 设置速度应用
 local function setupSpeedApplication()
     if speedConnection then
         speedConnection:Disconnect()
+        speedConnection = nil
     end
     
-    speedConnection = RunService.RenderStepped:Connect(function(deltaTime)
-        if isSpeeding and LocalPlayer.Character then
-            local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if humanoid and humanoid.Parent then
-                -- 高频应用速度效果
-                humanoid.WalkSpeed = defaultWalkSpeed * speedMultiplier
+    -- 清除当前humanoid引用
+    currentHumanoid = nil
+    
+    -- 获取当前角色的humanoid
+    if LocalPlayer.Character then
+        currentHumanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if currentHumanoid then
+            -- 重置为默认速度
+            setWalkSpeedSafe(currentHumanoid, defaultWalkSpeed)
+            
+            -- 如果加速开启，则应用加速
+            if isSpeeding then
+                setWalkSpeedSafe(currentHumanoid, defaultWalkSpeed * speedMultiplier)
             end
+        end
+    end
+    
+    -- 设置持续监控
+    speedConnection = RunService.Heartbeat:Connect(function()
+        if not currentHumanoid or not currentHumanoid.Parent then
+            -- 重新获取humanoid引用
+            if LocalPlayer.Character then
+                currentHumanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if currentHumanoid and isSpeeding then
+                    setWalkSpeedSafe(currentHumanoid, defaultWalkSpeed * speedMultiplier)
+                end
+            end
+        elseif isSpeeding then
+            -- 持续应用加速效果
+            setWalkSpeedSafe(currentHumanoid, defaultWalkSpeed * speedMultiplier)
         end
     end)
 end
@@ -805,35 +833,40 @@ end
 -- 初始化速度应用
 setupSpeedApplication()
 
--- 开启加速功能
-isSpeeding = true
-
 -- 角色重新生成时重置速度和引用
 LocalPlayer.CharacterAdded:Connect(function(newCharacter)
-    character = newCharacter
-    local humanoid = character:WaitForChild("Humanoid")
+    -- 等待humanoid加载完成
+    local humanoid = newCharacter:WaitForChild("Humanoid")
     
-    -- 重置默认速度为新角色的实际速度
+    -- 更新默认速度为新角色的实际速度
     defaultWalkSpeed = humanoid.WalkSpeed
     
     -- 重新设置速度应用
     setupSpeedApplication()
     
-    -- 只有在加速开启时才应用加速
-    if isSpeeding then
-        humanoid.WalkSpeed = defaultWalkSpeed * speedMultiplier
+    print("角色重生，速度已重置")
+end)
+
+-- 角色移除时清理
+LocalPlayer.CharacterRemoving:Connect(function()
+    if speedConnection then
+        speedConnection:Disconnect()
+        speedConnection = nil
     end
+    currentHumanoid = nil
 end)
 
 -- 游戏退出时重置速度
 Players.PlayerRemoving:Connect(function(leavingPlayer)
     if leavingPlayer == LocalPlayer then
-        local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid and humanoid.Parent then
-            humanoid.WalkSpeed = defaultWalkSpeed
-        end
         if speedConnection then
             speedConnection:Disconnect()
+            speedConnection = nil
+        end
+        
+        local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid and humanoid.Parent then
+            setWalkSpeedSafe(humanoid, defaultWalkSpeed)
         end
     end
 end)
@@ -885,7 +918,7 @@ local function createCircularMenu()
     local buttonContainer = Instance.new("Frame")
     buttonContainer.Name = "ButtonContainer"
     buttonContainer.Size = UDim2.new(0, 0, 0, 0)
-    buttonContainer.Position = UDim2.new(0.5, 0, 0.5, 0)
+    buttonContainer.Position = UDim2.new(0.5, 0, 0.4, 0)
     buttonContainer.AnchorPoint = Vector2.new(0.5, 0.5)
     buttonContainer.BackgroundTransparency = 1
     buttonContainer.Visible = false
@@ -1199,9 +1232,8 @@ local function createCircularMenu()
             setupSpeedApplication()
         else
             -- 取消加速，恢复默认速度
-            local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if humanoid and humanoid.Parent then
-                humanoid.WalkSpeed = defaultWalkSpeed
+            if currentHumanoid and currentHumanoid.Parent then
+                setWalkSpeedSafe(currentHumanoid, defaultWalkSpeed)
             end
         end
     end)
