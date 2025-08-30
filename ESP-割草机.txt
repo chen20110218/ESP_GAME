@@ -1,41 +1,4 @@
 local Players = game:GetService("Players")
-
-local whitelist = {
-    "qiaoyanbo1234",
-    "qiaoyanbo12",
-    "HYYNO1",
-    "CS78chen",
-    "yufc276",
-    
-}
-
-local whitelistLookup = {}
-for _, name in ipairs(whitelist) do
-    whitelistLookup[name:lower()] = true
-end
-
-local function isPlayerWhitelisted(player)
-    return whitelistLookup[player.Name:lower()] == true
-end
-
-local function onPlayerAdded(player)
-    if not isPlayerWhitelisted(player) then
-        player:Kick("你不在白名单中，无法使用")
-        print("玩家 " .. player.Name .. " 尝试加入但不在白名单中，已被踢出。")
-    else
-        print("玩家 " .. player.Name .. " 在白名单中，允许进入游戏。")
-    end
-end
-
-for _, player in ipairs(Players:GetPlayers()) do
-    task.spawn(onPlayerAdded, player)
-end
-
-Players.PlayerAdded:Connect(onPlayerAdded)
-
-print("白名单系统已启动，白名单用户数量: " .. #whitelist)
-print("✅ 等待结束，开始执行主脚本...")
-local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local GuiService = game:GetService("GuiService")
 
@@ -993,23 +956,6 @@ local function createCircularMenu()
     buttonCorner4.CornerRadius = UDim.new(0.2, 0)
     buttonCorner4.Parent = nightVisionToggleButton
     
-    -- 创建加速开关按钮
-    local speedToggleButton = Instance.new("TextButton")
-    speedToggleButton.Name = "SpeedToggleButton"
-    speedToggleButton.Size = UDim2.new(0, 120, 0, 30)
-    speedToggleButton.Position = UDim2.new(0, 0, 0, 0)
-    speedToggleButton.BackgroundColor3 = isSpeeding and Color3.fromRGB(255, 150, 50) or Color3.fromRGB(100, 100, 100)
-    speedToggleButton.Text = isSpeeding and "加速开启" or "加速关闭"
-    speedToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    speedToggleButton.TextSize = 14
-    speedToggleButton.Font = Enum.Font.SourceSansBold
-    speedToggleButton.AutoButtonColor = true
-    speedToggleButton.Visible = false
-    
-    local buttonCorner5 = Instance.new("UICorner")
-    buttonCorner5.CornerRadius = UDim.new(0.2, 0)
-    buttonCorner5.Parent = speedToggleButton
-    
     -- 菜单状态
     local menuExpanded = false
     
@@ -1025,7 +971,7 @@ local function createCircularMenu()
             local expandTween = TweenService:Create(
                 buttonContainer,
                 TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                {Size = UDim2.new(0, 150, 0, 180)}
+                {Size = UDim2.new(0, 150, 0, 140)}
             )
             expandTween:Play()
             
@@ -1034,13 +980,11 @@ local function createCircularMenu()
             enemyEspButton.Parent = buttonContainer
             trashEspButton.Parent = buttonContainer
             nightVisionToggleButton.Parent = buttonContainer
-            speedToggleButton.Parent = buttonContainer
             
             playerEspButton.Visible = true
             enemyEspButton.Visible = true
             trashEspButton.Visible = true
             nightVisionToggleButton.Visible = true
-            speedToggleButton.Visible = true
             
             -- 玩家ESP按钮动画
             local playerEspTween = TweenService:Create(
@@ -1073,14 +1017,6 @@ local function createCircularMenu()
                 {Position = UDim2.new(0, 15, 0, 130)}
             )
             nightVisionTween:Play()
-            
-            -- 加速按钮动画
-            local speedTween = TweenService:Create(
-                speedToggleButton,
-                TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0.4),
-                {Position = UDim2.new(0, 15, 0, 170)}
-            )
-            speedTween:Play()
         else
             -- 收起按钮
             local playerEspTween = TweenService:Create(
@@ -1111,13 +1047,6 @@ local function createCircularMenu()
             )
             nightVisionTween:Play()
             
-            local speedTween = TweenService:Create(
-                speedToggleButton,
-                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                {Position = UDim2.new(0, 0, 0, 0)}
-            )
-            speedTween:Play()
-            
             -- 延迟后隐藏容器
             task.delay(0.3, function()
                 if not menuExpanded then
@@ -1126,7 +1055,6 @@ local function createCircularMenu()
                     enemyEspButton.Visible = false
                     trashEspButton.Visible = false
                     nightVisionToggleButton.Visible = false
-                    speedToggleButton.Visible = false
                     
                     -- 收起容器
                     local collapseTween = TweenService:Create(
@@ -1220,24 +1148,6 @@ local function createCircularMenu()
         nightVisionToggleButton.Text = newState and "夜视开启" or "夜视关闭"
     end)
     
-    -- 加速按钮点击事件
-    speedToggleButton.MouseButton1Click:Connect(function()
-        isSpeeding = not isSpeeding
-        
-        speedToggleButton.BackgroundColor3 = isSpeeding and Color3.fromRGB(255, 150, 50) or Color3.fromRGB(100, 100, 100)
-        speedToggleButton.Text = isSpeeding and "加速开启" or "加速关闭"
-        
-        -- 应用或取消加速效果
-        if isSpeeding then
-            setupSpeedApplication()
-        else
-            -- 取消加速，恢复默认速度
-            if currentHumanoid and currentHumanoid.Parent then
-                setWalkSpeedSafe(currentHumanoid, defaultWalkSpeed)
-            end
-        end
-    end)
-    
     -- 拖拽功能
     local dragging
     local dragInput
@@ -1290,3 +1200,210 @@ print("玩家ESP: " .. (playerEspEnabled and "开启" or "关闭"))
 print("敌人ESP: " .. (enemyEspEnabled and "开启" or "关闭"))
 print("废料ESP: " .. (trashEspEnabled and "开启" or "关闭"))
 print("加速功能: " .. (isSpeeding and "开启" or "关闭"))
+print("✅ 等待结束，开始执行主脚本...")
+
+-- 在这里拼接你的主脚本
+-- 你的主脚本内容从这里开始...
+-- 服务器脚本：在指定位置创建六个标记
+-- 将此脚本放在ServerScriptService中
+
+local ServerStorage = game:GetService("ServerStorage")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+
+-- 目标坐标
+local markerPositions = {
+    watchtower = Vector3.new(48.06, 57.82, -46.03),   -- 瞭望塔坐标
+    redhouse = Vector3.new(-36.38, 17.61, 200.02),    -- 红房坐标
+    safehouse = Vector3.new(-359.93, 15.37, 69.19),   -- 安全屋坐标
+    powerstation = Vector3.new(-308.60, 20.00, -208.13), -- 发电站坐标
+    store = Vector3.new(-25.96, 16.31, -252.33),      -- 商店坐标
+    rakenest = Vector3.new(-154.01, 19.84, 29.52)     -- Rake老巢坐标
+}
+
+local markerConfigs = {
+    watchtower = {
+        text = "瞭望塔\n  ·",
+        color = Color3.fromRGB(170, 0, 255)  -- 紫色
+    },
+    redhouse = {
+        text = "红房\n ·",
+        color = Color3.fromRGB(255, 50, 50)  -- 亮红色
+    },
+    safehouse = {
+        text = "安全屋\n  ·",
+        color = Color3.fromRGB(50, 255, 50)  -- 绿色
+    },
+    powerstation = {
+        text = "发电站\n  ·",
+        color = Color3.fromRGB(139, 69, 19)  -- 棕色
+    },
+    store = {
+        text = "商店\n ·",
+        color = Color3.fromRGB(0, 100, 255)  -- 蓝色
+    },
+    rakenest = {
+        text = "Rake老巢\n   ·",
+        color = Color3.fromRGB(255, 255, 0)  -- 黄色
+    }
+}
+
+local markers = {}
+
+-- 创建标记函数
+local function createMarker(position, text, color)
+    -- 创建广告牌GUI的容器
+    local part = Instance.new("Part")
+    part.Anchored = true
+    part.CanCollide = false
+    part.Transparency = 1  -- 完全透明，我们只需要它的位置
+    part.Size = Vector3.new(2, 2, 2)
+    part.Position = position
+    part.Parent = workspace
+    
+    -- 创建广告牌GUI
+    local billboard = Instance.new("BillboardGui")
+    billboard.Adornee = part
+    billboard.Size = UDim2.new(0, 200, 0, 80)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)  -- 在部件上方显示
+    billboard.AlwaysOnTop = true
+    
+    -- 创建文本标签
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.Font = Enum.Font.SourceSansBold
+    label.TextColor3 = color
+    label.TextSize = 24
+    label.TextStrokeTransparency = 0.8  -- 文字描边，使其在各种背景下都清晰可见
+    label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    label.Parent = billboard
+    
+    billboard.Parent = part
+    
+    return part
+end
+
+-- 创建所有标记
+for markerType, position in pairs(markerPositions) do
+    markers[markerType] = createMarker(
+        position, 
+        markerConfigs[markerType].text, 
+        markerConfigs[markerType].color
+    )
+end
+
+-- 当玩家加入时，确保他们能看到所有标记
+Players.PlayerAdded:Connect(function(player)
+    -- 当新玩家加入时，确保标记对他们可见
+    for markerType, position in pairs(markerPositions) do
+        if not markers[markerType] or not markers[markerType].Parent then
+            markers[markerType] = createMarker(
+                position, 
+                markerConfigs[markerType].text, 
+                markerConfigs[markerType].color
+            )
+        end
+    end
+end)
+
+-- 可选：添加一个远程事件，以便客户端可以请求更新标记位置
+local updateMarkerEvent = Instance.new("RemoteEvent")
+updateMarkerEvent.Name = "UpdateLocationMarker"
+updateMarkerEvent.Parent = ReplicatedStorage
+
+updateMarkerEvent.OnServerEvent:Connect(function(player, markerType, newPosition)
+    -- 这里可以添加权限检查，例如只允许管理员更新位置
+    if markers[markerType] then
+        markers[markerType]:Destroy()
+    end
+    markerPositions[markerType] = newPosition
+    markers[markerType] = createMarker(
+        newPosition, 
+        markerConfigs[markerType].text, 
+        markerConfigs[markerType].color
+    )
+end)
+
+-- 添加标记可见性控制
+local markerVisibility = {
+    watchtower = true,
+    redhouse = true,
+    safehouse = true,
+    powerstation = true,
+    store = true,
+    rakenest = true
+}
+
+local function setMarkerVisibility(markerType, visible)
+    if markers[markerType] then
+        markers[markerType].BillboardGui.Enabled = visible
+        markerVisibility[markerType] = visible
+    end
+end
+
+-- 添加远程事件来控制可见性
+local toggleVisibilityEvent = Instance.new("RemoteEvent")
+toggleVisibilityEvent.Name = "ToggleMarkerVisibility"
+toggleVisibilityEvent.Parent = ReplicatedStorage
+
+toggleVisibilityEvent.OnServerEvent:Connect(function(player, markerType)
+    if markerVisibility[markerType] ~= nil then
+        setMarkerVisibility(markerType, not markerVisibility[markerType])
+    end
+end)
+
+-- 返回标记对象，以便其他脚本可以使用
+return {
+    Markers = markers,
+    Positions = markerPositions,
+    UpdatePosition = function(markerType, newPosition)
+        if markers[markerType] then
+            markers[markerType]:Destroy()
+        end
+        markerPositions[markerType] = newPosition
+        markers[markerType] = createMarker(
+            newPosition, 
+            markerConfigs[markerType].text, 
+            markerConfigs[markerType].color
+        )
+    end,
+    AddMarker = function(markerType, position, text, color)
+        if markers[markerType] then
+            markers[markerType]:Destroy()
+        end
+        markerPositions[markerType] = position
+        markerConfigs[markerType] = {
+            text = text,
+            color = color
+        }
+        markers[markerType] = createMarker(position, text, color)
+    end,
+    RemoveMarker = function(markerType)
+        if markers[markerType] then
+            markers[markerType]:Destroy()
+            markers[markerType] = nil
+            markerPositions[markerType] = nil
+            markerConfigs[markerType] = nil
+        end
+    end,
+    SetVisibility = setMarkerVisibility,
+    ToggleVisibility = function(markerType)
+        if markerVisibility[markerType] ~= nil then
+            setMarkerVisibility(markerType, not markerVisibility[markerType])
+        end
+    end,
+    GetAllMarkersInfo = function()
+        local info = {}
+        for markerType, _ in pairs(markerPositions) do
+            info[markerType] = {
+                position = markerPositions[markerType],
+                text = markerConfigs[markerType].text,
+                color = markerConfigs[markerType].color,
+                visible = markerVisibility[markerType]
+            }
+        end
+        return info
+    end
+}
