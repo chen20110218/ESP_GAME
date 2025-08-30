@@ -38,7 +38,43 @@ print("✅ 等待结束，开始执行主脚本...")
 
 -- 在这里拼接你的主脚本
 -- 你的主脚本内容从这里开始...
--- 服务器检测与条件加载脚本
+-- 服务器检测脚本（无重试功能）
+local function loadScript(url, scriptName)
+    -- 显示加载信息
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "加载中",
+        Text = "正在加载" .. scriptName,
+        Icon = "",
+        Duration = 2
+    })
+    
+    -- 尝试加载脚本
+    local loadSuccess, loadError = pcall(function()
+        loadstring(game:HttpGet(url, true))()
+    end)
+    
+    if loadSuccess then
+        -- 显示成功信息
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "成功",
+            Text = scriptName .. "已成功加载",
+            Icon = "",
+            Duration = 5
+        })
+        return true
+    else
+        warn("加载" .. scriptName .. "失败: " .. tostring(loadError))
+        -- 显示失败信息
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "错误",
+            Text = scriptName .. "加载失败",
+            Icon = "",
+            Duration = 5
+        })
+        return false
+    end
+end
+
 local function checkServer()
     -- 先显示欢迎信息
     game:GetService("StarterGui"):SetCore("SendNotification", {
@@ -63,7 +99,7 @@ local function checkServer()
         -- 使用游戏弹窗功能
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "服务器检测",
-            Text = "已检测到rake，正在加载相关功能",
+            Text = "已检测到rake，正在加载rake功能",
             Icon = "",
             Duration = 5
         })
@@ -71,20 +107,11 @@ local function checkServer()
         -- 等待一下让通知显示
         wait(1)
         
-        -- 加载并执行第二个ESP脚本
-        local loadSuccess, loadError = pcall(function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/chen20110218/ESP_GAME/refs/heads/main/ESP-%E5%89%B2%E8%8D%89%E6%9C%BA.txt", true))()
-        end)
-        
-        if not loadSuccess then
-            warn("加载NY脚本失败: " .. tostring(loadError))
-            game:GetService("StarterGui"):SetCore("SendNotification", {
-                Title = "错误",
-                Text = "NY脚本加载失败",
-                Icon = "",
-                Duration = 5
-            })
-        end
+        -- 尝试加载ESP脚本（只尝试一次）
+        loadScript(
+            "https://raw.githubusercontent.com/chen20110218/ESP_GAME/refs/heads/main/ESP-%E5%89%B2%E8%8D%89%E6%9C%BA.txt",
+            "ESP功能"
+        )
     else
         -- 使用游戏弹窗功能
         game:GetService("StarterGui"):SetCore("SendNotification", {
@@ -93,6 +120,15 @@ local function checkServer()
             Icon = "",
             Duration = 5
         })
+        
+        -- 等待一下让通知显示
+        wait(1)
+        
+        -- 尝试加载通用脚本（只尝试一次）
+        loadScript(
+            "https://raw.githubusercontent.com/MP00N/function2/refs/heads/main/fly",
+            "飞行功能"
+        )
     end
 end
 
