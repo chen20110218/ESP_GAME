@@ -1,0 +1,65 @@
+-- 坐标显示器脚本
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+-- 创建界面元素
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "CoordinateDisplay"
+screenGui.Parent = player.PlayerGui
+screenGui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0.3, 0, 0.06, 0)
+frame.Position = UDim2.new(0.35, 0, 0.02, 0)
+frame.BackgroundTransparency = 0.7
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BorderSizePixel = 0
+frame.Parent = screenGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 8)
+corner.Parent = frame
+
+local label = Instance.new("TextLabel")
+label.Size = UDim2.new(1, 0, 1, 0)
+label.BackgroundTransparency = 1
+label.Text = "坐标: X: 0.00, Y: 0.00, Z: 0.00"
+label.Font = Enum.Font.SourceSansBold
+label.TextColor3 = Color3.fromRGB(255, 255, 255)
+label.TextSize = 20
+label.Parent = frame
+
+-- 更新坐标的函数
+local function updateCoordinates()
+    local position = humanoidRootPart.Position
+    label.Text = string.format("坐标: X: %.2f, Y: %.2f, Z: %.2f", 
+        position.X, position.Y, position.Z)
+end
+
+-- 角色重生时的处理
+player.CharacterAdded:Connect(function(newCharacter)
+    character = newCharacter
+    humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+end)
+
+-- 每帧更新坐标
+RunService.RenderStepped:Connect(updateCoordinates)
+
+-- 可选：添加切换显示的热键（按H键切换显示/隐藏）
+local userInputService = game:GetService("UserInputService")
+local visible = true
+
+userInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    if input.KeyCode == Enum.KeyCode.H then
+        visible = not visible
+        frame.Visible = visible
+    end
+end)
+
+return updateCoordinates -- 返回更新函数，方便其他脚本调用
