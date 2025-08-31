@@ -121,6 +121,21 @@ local function disableNightVision()
     end
 end
 
+-- 夜视切换函数
+local function toggleNightVision()
+    nightVisionEnabled = not nightVisionEnabled
+    
+    if nightVisionEnabled then
+        enableNightVision()
+        print("夜视功能已启用")
+    else
+        disableNightVision()
+        print("夜视功能已禁用")
+    end
+    
+    return nightVisionEnabled
+end
+
 -- 游戏关闭时自动清理
 game:GetService("Players").LocalPlayer:GetPropertyChangedSignal("Parent"):Connect(function()
     if not game:GetService("Players").LocalPlayer.Parent then
@@ -131,3 +146,40 @@ end)
 -- 默认启用夜视
 enableNightVision()
 print("夜视功能已默认启用")
+
+-- 创建简单的夜视切换按钮
+local function createNightVisionToggle()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "NightVisionToggleGUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Name = "NightVisionToggle"
+    toggleButton.Size = UDim2.new(0, 120, 0, 40)
+    toggleButton.Position = UDim2.new(0, 10, 0, 10)
+    toggleButton.BackgroundColor3 = Color3.fromRGB(50, 200, 200)
+    toggleButton.Text = "夜视开启"
+    toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleButton.TextSize = 16
+    toggleButton.Font = Enum.Font.SourceSansBold
+    toggleButton.AutoButtonColor = true
+    
+    -- 圆角
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0.2, 0)
+    corner.Parent = toggleButton
+    
+    toggleButton.MouseButton1Click:Connect(function()
+        local newState = toggleNightVision()
+        toggleButton.BackgroundColor3 = newState and Color3.fromRGB(50, 200, 200) or Color3.fromRGB(100, 100, 150)
+        toggleButton.Text = newState and "夜视开启" or "夜视关闭"
+    end)
+    
+    toggleButton.Parent = screenGui
+    return screenGui
+end
+
+-- 创建夜视切换按钮
+createNightVisionToggle()
