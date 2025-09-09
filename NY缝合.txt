@@ -1,48 +1,5 @@
-local Players = game:GetService("Players")
-
-local whitelist = {
-    "qiaoyanbo1234",
-    "\113\105\97\111\121\97\110\98\111\49\50",
-    "HYYNO1",
-    "CS78chen",
-    "yufc276",
-    "dreamfsws",
-    "114514ap02",
-    
-}
-
-local whitelistLookup = {}
-for _, name in ipairs(whitelist) do
-    whitelistLookup[name:lower()] = true
-end
-
-local function isPlayerWhitelisted(player)
-    return whitelistLookup[player.Name:lower()] == true
-end
-
-local function onPlayerAdded(player)
-    if not isPlayerWhitelisted(player) then
-        player:Kick("你不在白名单中，无法使用")
-        print("玩家 " .. player.Name .. " 尝试加入但不在白名单中，已被踢出。")
-    else
-        print("玩家 " .. player.Name .. " 在白名单中，允许进入游戏。")
-    end
-end
-
-for _, player in ipairs(Players:GetPlayers()) do
-    task.spawn(onPlayerAdded, player)
-end
-
-Players.PlayerAdded:Connect(onPlayerAdded)
-
-print("白名单系统已启动，白名单用户数量: " .. #whitelist)
-print("✅ 等待结束，开始执行主脚本...")
-
--- 在这里拼接你的主脚本
--- 你的主脚本内容从这里开始...
--- 服务器检测脚本（无重试功能）
+loadstring(game:HttpGet("https://raw.githubusercontent.com/chen20110218/ESP_GAME/refs/heads/main/%E7%99%BD%E5%90%8D%E5%8D%95.txt",true))()
 local function loadScript(url, scriptName)
-    -- 显示加载信息
     game:GetService("StarterGui"):SetCore("SendNotification", {
         Title = "加载中",
         Text = "正在加载" .. scriptName,
@@ -50,13 +7,11 @@ local function loadScript(url, scriptName)
         Duration = 2
     })
     
-    -- 尝试加载脚本
     local loadSuccess, loadError = pcall(function()
         loadstring(game:HttpGet(url, true))()
     end)
     
     if loadSuccess then
-        -- 显示成功信息
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "成功",
             Text = scriptName .. "已成功加载",
@@ -66,7 +21,6 @@ local function loadScript(url, scriptName)
         return true
     else
         warn("加载" .. scriptName .. "失败: " .. tostring(loadError))
-        -- 显示失败信息
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "错误",
             Text = scriptName .. "加载失败",
@@ -78,7 +32,6 @@ local function loadScript(url, scriptName)
 end
 
 local function checkServer()
-    -- 先显示欢迎信息
     game:GetService("StarterGui"):SetCore("SendNotification", {
         Title = "欢迎使用NY",
         Text = "正在检测服务器...",
@@ -86,19 +39,15 @@ local function checkServer()
         Duration = 3
     })
     
-    -- 等待一下让欢迎信息显示
     wait(2)
     
-    -- 获取当前游戏名称
     local success, result = pcall(function()
         return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
     end)
     
     local gameName = success and result or "未知游戏"
     
-    -- 检查是否为The Rake REMASTERED
     if string.find(string.lower(gameName), "the rake remastered") then
-        -- 使用游戏弹窗功能
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "服务器检测",
             Text = "已检测到rake，正在加载rake功能",
@@ -106,16 +55,13 @@ local function checkServer()
             Duration = 5
         })
         
-        -- 等待一下让通知显示
         wait(1)
         
-        -- 尝试加载ESP脚本（只尝试一次）
         loadScript(
             "https://raw.githubusercontent.com/chen20110218/ESP_GAME/refs/heads/main/ESP-%E5%89%B2%E8%8D%89%E6%9C%BA.txt",
             "ESP功能"
         )
     else
-        -- 使用游戏弹窗功能
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "服务器检测",
             Text = "没有扫描到服务器，为您开启通用功能",
@@ -123,10 +69,8 @@ local function checkServer()
             Duration = 5
         })
         
-        -- 等待一下让通知显示
         wait(1)
         
-        -- 尝试加载通用脚本（只尝试一次）
         loadScript(
             "https://raw.githubusercontent.com/MP00N/function2/refs/heads/main/fly",
             "飞行功能"
@@ -134,6 +78,5 @@ local function checkServer()
     end
 end
 
--- 等待玩家加载完成后执行检测
 game.Players.LocalPlayer:WaitForChild("PlayerGui")
 checkServer()
