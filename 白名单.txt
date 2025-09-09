@@ -1,0 +1,38 @@
+local Players = game:GetService("Players")
+
+local whitelist = {
+    "\113\105\97\111\121\97\110\98\111\49\50",
+    "\113\105\97\111\121\97\110\98\111\49\50\51\52",
+    "\49\49\52\53\49\52\97\112\48\50",
+    "\100\114\101\97\109\102\115\119\115",
+    "\121\117\102\99\50\55\54",
+    "\67\83\55\56\99\104\101\110",
+    "\72\89\89\78\79\49",
+    
+}
+
+local whitelistLookup = {}
+for _, name in ipairs(whitelist) do
+    whitelistLookup[name:lower()] = true
+end
+
+local function isPlayerWhitelisted(player)
+    return whitelistLookup[player.Name:lower()] == true
+end
+
+local function onPlayerAdded(player)
+    if not isPlayerWhitelisted(player) then
+        player:Kick("你不在白名单中，无法使用")
+        print("玩家 " .. player.Name .. "")
+    else
+        print("玩家 " .. player.Name .. "")
+    end
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+    task.spawn(onPlayerAdded, player)
+end
+
+Players.PlayerAdded:Connect(onPlayerAdded)
+
+print(": " .. #whitelist)
