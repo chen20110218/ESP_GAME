@@ -1,0 +1,38 @@
+local Players = game:GetService("Players")
+
+-- 黑名单列表（使用ASCII编码表示用户名）
+local blacklist = {
+    "",
+    
+}
+
+-- 创建黑名单查找表
+local blacklistLookup = {}
+for _, name in ipairs(blacklist) do
+    blacklistLookup[name:lower()] = true
+end
+
+-- 检查玩家是否在黑名单中
+local function isPlayerBlacklisted(player)
+    return blacklistLookup[player.Name:lower()] == true
+end
+
+-- 玩家加入时的处理函数
+local function onPlayerAdded(player)
+    if isPlayerBlacklisted(player) then
+        player:Kick("你在黑名单中，无法进入游戏")
+        print("已阻止黑名单玩家进入: " .. player.Name)
+    else
+        print("玩家 " .. player.Name .. " 已加入游戏")
+    end
+end
+
+-- 检查已经在线玩家
+for _, player in ipairs(Players:GetPlayers()) do
+    task.spawn(onPlayerAdded, player)
+end
+
+-- 监听新玩家加入事件
+Players.PlayerAdded:Connect(onPlayerAdded)
+
+print("黑名单系统已加载，当前黑名单人数: " .. #blacklist)
