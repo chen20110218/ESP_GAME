@@ -1,0 +1,221 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local SoundService = game:GetService("SoundService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- 创建主屏幕GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "DoorScriptNotice"
+screenGui.Parent = playerGui
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- 创建主框架
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 400, 0, 300)
+mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+mainFrame.BorderSizePixel = 0
+mainFrame.ClipsDescendants = true
+mainFrame.Parent = screenGui
+
+-- 添加圆角
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 8)
+corner.Parent = mainFrame
+
+-- 创建顶部装饰条
+local topBar = Instance.new("Frame")
+topBar.Name = "TopBar"
+topBar.Size = UDim2.new(1, 0, 0, 4)
+topBar.Position = UDim2.new(0, 0, 0, 0)
+topBar.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+topBar.BorderSizePixel = 0
+topBar.Parent = mainFrame
+
+-- 创建标题
+local title = Instance.new("TextLabel")
+title.Name = "Title"
+title.Size = UDim2.new(1, -40, 0, 30)
+title.Position = UDim2.new(0, 20, 0, 10)
+title.BackgroundTransparency = 1
+title.Text = "# 小鸟有点帅"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextScaled = true
+title.Font = Enum.Font.GothamBold
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = mainFrame
+
+-- 创建副标题
+local subtitle = Instance.new("TextLabel")
+subtitle.Name = "Subtitle"
+subtitle.Size = UDim2.new(1, -40, 0, 20)
+subtitle.Position = UDim2.new(0, 20, 0, 40)
+subtitle.BackgroundTransparency = 1
+subtitle.Text = "## 小鸟脚本 | 公告 | 3.0版本 ##"
+subtitle.TextColor3 = Color3.fromRGB(200, 200, 200)
+subtitle.TextScaled = true
+subtitle.Font = Enum.Font.Gotham
+subtitle.TextXAlignment = Enum.TextXAlignment.Left
+subtitle.Parent = mainFrame
+
+-- 创建提示文本
+local notice = Instance.new("TextLabel")
+notice.Name = "Notice"
+notice.Size = UDim2.new(1, -40, 0, 25)
+notice.Position = UDim2.new(0, 20, 0, 65)
+notice.BackgroundTransparency = 1
+notice.Text = "必看提示！！！"
+notice.TextColor3 = Color3.fromRGB(255, 100, 100)
+notice.TextScaled = true
+notice.Font = Enum.Font.GothamBold
+notice.TextXAlignment = Enum.TextXAlignment.Left
+notice.Parent = mainFrame
+
+-- 创建分隔线
+local separator = Instance.new("Frame")
+separator.Name = "Separator"
+separator.Size = UDim2.new(1, -40, 0, 2)
+separator.Position = UDim2.new(0, 20, 0, 95)
+separator.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+separator.BorderSizePixel = 0
+separator.Parent = mainFrame
+
+-- 创建公告内容文本
+local content = Instance.new("TextLabel")
+content.Name = "Content"
+content.Size = UDim2.new(1, -40, 0, 130)
+content.Position = UDim2.new(0, 20, 0, 105)
+content.BackgroundTransparency = 1
+content.Text = "111,
+222"
+content.TextColor3 = Color3.fromRGB(220, 220, 220)
+content.TextSize = 16
+content.TextWrapped = true
+content.Font = Enum.Font.Gotham
+content.TextXAlignment = Enum.TextXAlignment.Left
+content.TextYAlignment = Enum.TextYAlignment.Top
+content.Parent = mainFrame
+
+-- 创建按钮容器
+local buttonContainer = Instance.new("Frame")
+buttonContainer.Name = "ButtonContainer"
+buttonContainer.Size = UDim2.new(1, -40, 0, 35)
+buttonContainer.Position = UDim2.new(0, 20, 1, -50)
+buttonContainer.BackgroundTransparency = 1
+buttonContainer.Parent = mainFrame
+
+-- 创建确认按钮
+local confirmButton = Instance.new("TextButton")
+confirmButton.Name = "ConfirmButton"
+confirmButton.Size = UDim2.new(0.5, -5, 1, 0)
+confirmButton.Position = UDim2.new(0, 0, 0, 0)
+confirmButton.AnchorPoint = Vector2.new(0, 0)
+confirmButton.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+confirmButton.Text = "确认加载"
+confirmButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+confirmButton.TextSize = 16
+confirmButton.Font = Enum.Font.GothamBold
+confirmButton.Parent = buttonContainer
+
+-- 按钮圆角
+local buttonCorner = Instance.new("UICorner")
+buttonCorner.CornerRadius = UDim.new(0, 4)
+buttonCorner.Parent = confirmButton
+
+-- 添加按钮悬停效果
+confirmButton.MouseEnter:Connect(function()
+    TweenService:Create(confirmButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(30, 144, 255)}):Play()
+end)
+
+confirmButton.MouseLeave:Connect(function()
+    TweenService:Create(confirmButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(0, 162, 255)}):Play()
+end)
+
+-- 创建取消按钮
+local cancelButton = Instance.new("TextButton")
+cancelButton.Name = "CancelButton"
+cancelButton.Size = UDim2.new(0.5, -5, 1, 0)
+cancelButton.Position = UDim2.new(0.5, 5, 0, 0)
+cancelButton.AnchorPoint = Vector2.new(0, 0)
+cancelButton.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+cancelButton.Text = "取消加载"
+cancelButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+cancelButton.TextSize = 16
+cancelButton.Font = Enum.Font.GothamBold
+cancelButton.Parent = buttonContainer
+
+-- 取消按钮圆角
+local cancelButtonCorner = Instance.new("UICorner")
+cancelButtonCorner.CornerRadius = UDim.new(0, 4)
+cancelButtonCorner.Parent = cancelButton
+
+-- 添加取消按钮悬停效果
+cancelButton.MouseEnter:Connect(function()
+    TweenService:Create(cancelButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(180, 180, 180)}):Play()
+end)
+
+cancelButton.MouseLeave:Connect(function()
+    TweenService:Create(cancelButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(150, 150, 150)}):Play()
+end)
+
+-- 创建全局变量用于存储确认状态
+_G.AYScriptConfirmed = false
+_G.AYScriptCancelled = false
+
+-- 确认按钮点击事件
+confirmButton.MouseButton1Click:Connect(function()
+    -- 播放确认音效
+    local sound = Instance.new("Sound")
+    sound.SoundId = "rbxassetid://170765130"
+    sound.Parent = SoundService
+    sound:Play()
+    
+    -- 等待音效播放完成
+    wait(0.5)
+    
+    TweenService:Create(mainFrame, TweenInfo.new(0.3), {Size = UDim2.new(0, 400, 0, 0)}):Play()
+    wait(0.3)
+    screenGui:Destroy()
+    _G.AYScriptConfirmed = true
+end)
+
+-- 取消按钮点击事件
+cancelButton.MouseButton1Click:Connect(function()
+    -- 播放取消音效
+    local sound = Instance.new("Sound")
+    sound.SoundId = "rbxassetid://138080933"
+    sound.Parent = SoundService
+    sound:Play()
+    
+    TweenService:Create(mainFrame, TweenInfo.new(0.3), {Size = UDim2.new(0, 400, 0, 0)}):Play()
+    wait(0.3)
+    screenGui:Destroy()
+    _G.AYScriptCancelled = true
+end)
+
+-- 添加入场动画
+mainFrame.Size = UDim2.new(0, 400, 0, 0)
+TweenService:Create(mainFrame, TweenInfo.new(0.5), {Size = UDim2.new(0, 400, 0, 300)}):Play()
+
+-- 添加屏幕尺寸变化时的自适应
+local function updatePosition()
+    mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+end
+
+-- 监听屏幕尺寸变化
+game:GetService("RunService").RenderStepped:Connect(updatePosition)
+
+-- 等待用户确认或取消
+while not _G.AYScriptConfirmed and not _G.AYScriptCancelled do
+    wait(0.1)
+end
+
+-- 如果用户取消加载，则不执行后续内容
+if _G.AYScriptCancelled then
+    return
+end
